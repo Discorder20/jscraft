@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import BLOCKS from './blocks.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 
+const manager = new THREE.LoadingManager();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
@@ -30,7 +31,7 @@ let cubes = [];
 
 function addBlock(block, x, y, z) 
 {
-  const textureLoader = new THREE.TextureLoader();
+  const textureLoader = new THREE.TextureLoader(manager);
   const texture = textureLoader.load(block.sidetexture);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
