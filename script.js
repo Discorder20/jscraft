@@ -2,20 +2,38 @@ import * as THREE from 'three';
 import BLOCKS from './blocks.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { itemCollected, placeCurrentItem } from './toolbar.js';
+
+const storage = [
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+  {block: '', amount: 0},
+]
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
+const geometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+const whitematerial = new THREE.MeshBasicMaterial({color: "white", transparent: true, opacity: 0.2})
+const highlightblock = new THREE.Mesh(geometry, whitematerial);
+
 const WIDTH = 50;
 const HEIGHT = 50;
-const TREE_COUNT = 6;
+const TREE_COUNT = 20;
 
 let textureCache = {}
 const instancedMeshes = {};
 
 const manager = new THREE.LoadingManager();
 const scene = new THREE.Scene();
+scene.add(highlightblock)
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 3000 );
 
 const renderer = new THREE.WebGLRenderer();
@@ -102,8 +120,9 @@ function addBlock(block, x, y, z) {
   // Create or get the instanced mesh for this block type
   if (!instancedMeshes[block.name]) {
     // Estimate a max count (can be increased if needed)
-    const maxCount = 5000;
+    const maxCount = 20000;
     const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
+    instancedMesh.name = block.name;
     instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     instancedMeshes[block.name] = instancedMesh;
     instancedMeshCounts[block.name] = 0;
@@ -188,14 +207,15 @@ for (let i = -10; i < WIDTH; ++i) {
   for (let j = -10; j < HEIGHT; ++j) {
     addBlock(BLOCKS.grass, i, -5, j);
     addBlockPosition(i, -5, j);
-  }
-}
-for (let i = -10; i < WIDTH; ++i) {
-  for (let j = -10; j < HEIGHT; ++j) {
     addBlock(BLOCKS.stone, i, -6, j);
     addBlockPosition(i, -6, j);
+    addBlock(BLOCKS.stone, i, -7, j);
+    addBlockPosition(i, -7, j);
+    addBlock(BLOCKS.stone, i, -8, j);
+    addBlockPosition(i, -8, j);
   }
 }
+
 for (let i = 0; i < TREE_COUNT; ++i) {
   let x = getRandomInt(HEIGHT + 10) - 10;
   let y = getRandomInt(WIDTH + 10) - 10;
@@ -349,20 +369,120 @@ window.addEventListener('mousemove', (evt) => {
     lastHighlight.originalColor = null;
   }
 
-  if (intersects.length > 0) {
+  if (intersects.length > 0 && intersects[0].distance < 4.0) {
     const intersect = intersects[0];
+    const instanceId = intersect.instanceId;
     const mesh = intersect.object;
-    const index = intersect.instanceId;
-    if (mesh && index !== undefined) {
-      // Save original color
-      let color = new THREE.Color();
-      mesh.getColorAt(index, color);
-      lastHighlight.mesh = mesh;
-      lastHighlight.index = index;
-      lastHighlight.originalColor = color.clone();
-      // Set highlight color
-      mesh.setColorAt(index, new THREE.Color(1, 1, 1));
-      mesh.instanceColor.needsUpdate = true;
+    const matrix = new THREE.Matrix4();
+    mesh.getMatrixAt(instanceId, matrix);
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(matrix);
+    highlightblock.position.copy(position);
+  } else {
+    highlightblock.position.set(-100, -100, -100)
+  }
+});
+
+window.addEventListener('click', (evt) => {
+  evt.preventDefault();
+  mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
+  mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
+  rayCaster.setFromCamera(mousePosition, camera);
+  // Gather all instanced meshes
+  const allMeshes = Object.values(instancedMeshes);
+  let intersects = rayCaster.intersectObjects(allMeshes, true);
+
+  // Restore previous highlight
+  if (lastHighlight.mesh && lastHighlight.index !== null && lastHighlight.originalColor) {
+    lastHighlight.mesh.setColorAt(lastHighlight.index, lastHighlight.originalColor);
+    lastHighlight.mesh.instanceColor.needsUpdate = true;
+    lastHighlight.mesh = null;
+    lastHighlight.index = null;
+    lastHighlight.originalColor = null;
+  }
+
+  if (intersects.length > 0 && intersects[0].distance < 4.0) {
+    const intersect = intersects[0];
+    const instanceId = intersect.instanceId;
+    const mesh = intersect.object;
+    const matrix = new THREE.Matrix4();
+    mesh.getMatrixAt(instanceId, matrix);
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(matrix);
+    itemCollected(mesh.name)
+
+    // Remove the block from the scene
+    // 1. Remove from blockPositions
+    for (let i = 0; i < blockPositions.length; ++i) {
+      if (
+        Math.abs(blockPositions[i].x - position.x) < 0.1 &&
+        Math.abs(blockPositions[i].y - position.y) < 0.1 &&
+        Math.abs(blockPositions[i].z - position.z) < 0.1
+      ) {
+        blockPositions.splice(i, 1);
+        break;
+      }
+    }
+
+    // 2. Remove the instance from the instanced mesh
+    const lastIdx = mesh.count - 1;
+    if (instanceId !== lastIdx) {
+      // Move last instance to the removed spot
+      const tempMatrix = new THREE.Matrix4();
+      mesh.getMatrixAt(lastIdx, tempMatrix);
+      mesh.setMatrixAt(instanceId, tempMatrix);
+      if (mesh.instanceColor) {
+        const tempColor = new THREE.Color();
+        mesh.getColorAt(lastIdx, tempColor);
+        mesh.setColorAt(instanceId, tempColor);
+      }
+    }
+    mesh.count--;
+    if (instancedMeshCounts[mesh.name] > 0) instancedMeshCounts[mesh.name]--;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) { mesh.instanceColor.needsUpdate = true};
+  }
+});
+
+window.addEventListener('contextmenu', (evt) => {
+  // Only place if highlightblock is visible and within a reasonable range
+  const pos = highlightblock.position;
+  if (pos.x < -99 || pos.y < -99 || pos.z < -99) return;
+  if (camera.position.distanceTo(pos) > 5) return;
+
+  let meshName = placeCurrentItem();
+  if (meshName) {
+    // Raycast again to get the face normal
+    mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
+    mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
+    rayCaster.setFromCamera(mousePosition, camera);
+    const allMeshes = Object.values(instancedMeshes);
+    let intersects = rayCaster.intersectObjects(allMeshes, true);
+
+    if (intersects.length > 0 && intersects[0].distance < 4.0) {
+      const intersect = intersects[0];
+      const normal = intersect.face.normal.clone();
+      // Transform normal by instance matrix (for rotated blocks)
+      normal.transformDirection(intersect.object.matrixWorld);
+      // Place block adjacent to the face clicked
+      const placePos = pos.clone().add(normal);
+
+      // Check if block already exists at placePos
+      const exists = blockPositions.some(bp =>
+        Math.abs(bp.x - placePos.x) < 0.1 &&
+        Math.abs(bp.y - placePos.y) < 0.1 &&
+        Math.abs(bp.z - placePos.z) < 0.1
+      );
+      if (exists) return;
+
+      const block = BLOCKS[meshName];
+      addBlock(block, placePos.x, placePos.y, placePos.z);
+      addBlockPosition(placePos.x, placePos.y, placePos.z);
+      const mesh = instancedMeshes[meshName];
+      if (mesh) {
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      }
     }
   }
 });
