@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import BLOCKS from './blocks.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
+const WIDTH = 10;
+const HEIGHT = 10;
+const TREE_COUNT = 6;
+
 let textureCache = {}
 
 const manager = new THREE.LoadingManager();
@@ -96,6 +104,19 @@ function isStandingOn()
   return false
 }
 
+function canMoveTo(targetPosition) {
+    let x = targetPosition.x;
+    let y = targetPosition.y;
+    let z = targetPosition.z;
+
+    for (let cube of cubes) {
+      if ((Math.abs(cube.position.x - x) < 0.9 && Math.abs(cube.position.z - z) < 0.9) && cube.position.y > y - 1 && cube.position.y < y + 1) {
+        return false;
+      }
+    }
+    return true;
+}
+
 // 2. Initial setup of the loading screen
 const loadingScreen = document.getElementById('loading-screen');
 if (loadingScreen) {
@@ -129,21 +150,44 @@ manager.onError = function ( url ) {
 };
 
 // --- Your existing game logic after the loading manager setup ---
-for (let i = -10; i < 10; ++i) {
-  for (let j = -10; j < 10; ++j) {
+for (let i = -10; i < WIDTH; ++i) {
+  for (let j = -10; j < HEIGHT; ++j) {
     addBlock(BLOCKS.grass, i, -5, j)
   }
+}
+
+for (let i = -10; i < WIDTH; ++i) {
+  for (let j = -10; j < HEIGHT; ++j) {
+    addBlock(BLOCKS.stone, i, -6, j)
+  }
+}
+
+for (let i = 0; i < TREE_COUNT; ++i) {
+  let x = getRandomInt(HEIGHT + 10) - 10
+  let y = getRandomInt(WIDTH + 10) - 10
+  let height = getRandomInt(3) + 3
+  for (let j = 0; j < height; ++j) {
+    addBlock(BLOCKS.wood, x, j - 4, y)
+  }
+  addBlock(BLOCKS.leaf, x, height - 4, y)
+  addBlock(BLOCKS.leaf, x, height - 5, y - 1)
+  addBlock(BLOCKS.leaf, x - 1, height - 5, y)
+  addBlock(BLOCKS.leaf, x, height - 5, y + 1)
+  addBlock(BLOCKS.leaf, x + 1, height - 5, y)
+  
 }
 
 let isMovingFront = false;
 let isMovingBack = false
 
 let isMovingLeft = false;
-let isMovingRight = false
+let isMovingRight = false;
+
+let canJump = false;
+let jumpIteration = 0;
 
 
-window.addEventListener('keydown', (e) => {
-  console.log(e)
+window.addEventListener('keydown', (e) => { 
   if (e.key == 'w') {
     isMovingFront = true;
   } else if (e.key == 's') {
@@ -152,11 +196,12 @@ window.addEventListener('keydown', (e) => {
     isMovingLeft = true;
   } else if (e.key == 'd') {
     isMovingRight = true;
+  } else if (e.key == ' ' && canJump) {
+    jumpIteration = 100;
   }
 })
 
 window.addEventListener('keyup', (e) => {
-  console.log(e)
   if (e.key == 'w') {
     isMovingFront = false;
   } else if (e.key == 's') {
@@ -176,37 +221,69 @@ function animate() {
   let speed = 5 * delta;
 
   if (isMovingFront) {
+    let clonedCamerapos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z)
     camera.getWorldDirection(direction);
     direction.y = 0;
-    camera.position.addScaledVector(direction, speed);
+    clonedCamerapos.addScaledVector(direction, speed);
+    if (canMoveTo(clonedCamerapos)) {
+      camera.position.addScaledVector(direction, speed);
+    }
   }
 
   if (isMovingBack) {
+    let clonedCamerapos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z)
     camera.getWorldDirection(direction);
     direction.y = 0;
     direction.x = direction.x * -1
     direction.z = direction.z * -1
-    camera.position.addScaledVector(direction, speed);
+    clonedCamerapos.addScaledVector(direction, speed);
+    if (canMoveTo(clonedCamerapos)) {
+      camera.position.addScaledVector(direction, speed);
+    }
   }
 
   if (isMovingLeft) {
+    let clonedCamerapos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z)
     camera.getWorldDirection(direction);
     direction.y = 0;
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-    camera.position.addScaledVector(direction, speed);
+    clonedCamerapos.addScaledVector(direction, speed);
+    if (canMoveTo(clonedCamerapos)) {
+      camera.position.addScaledVector(direction, speed);
+    }
   }
 
   if (isMovingRight) {
+    let clonedCamerapos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z)
     camera.getWorldDirection(direction);
     direction.y = 0;
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-    camera.position.addScaledVector(direction, speed);
+    clonedCamerapos.addScaledVector(direction, speed);
+    if (canMoveTo(clonedCamerapos)) {
+      camera.position.addScaledVector(direction, speed);
+    }
+  }
+
+  if (jumpIteration > 0) {
+    camera.position.y += 0.3 * (jumpIteration / 100);
+    jumpIteration = Math.max(0, jumpIteration - (200 * delta))
   }
 
   if (!isStandingOn()) {
     camera.position.y -= 0.1
+    canJump = false;
+  } else if (jumpIteration == 0) {
+    canJump = true;
   }
+
+
   controls.update(delta);
   renderer.render( scene, camera );
 
 }
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+})
