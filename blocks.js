@@ -1,8 +1,8 @@
 const BLOCKS = {
     grass: {
         name: 'grass',
-        toptexture: './images/grass-top.png',
-        sidetexture: './images/grass-side.webp',
+        toptexture: './images/grass-top.jpg',
+        sidetexture: './images/grass-side.jpg',
         bottomtexture: './images/grass-bottom.jpg',
     },
     stone: {

@@ -1,16 +1,18 @@
 import * as THREE from 'three';
 import BLOCKS from './blocks.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
-const WIDTH = 10;
-const HEIGHT = 10;
+const WIDTH = 50;
+const HEIGHT = 50;
 const TREE_COUNT = 6;
 
 let textureCache = {}
+const instancedMeshes = {};
 
 const manager = new THREE.LoadingManager();
 const scene = new THREE.Scene();
@@ -26,6 +28,9 @@ camera.position.z = 0;
 camera.position.x = 0;
 camera.position.y = 0;
 
+const rayCaster = new THREE.Raycaster();
+let mousePosition = new THREE.Vector2();
+
 let clock = new THREE.Clock();
 
 let controls = new FirstPersonControls(camera, document.body);
@@ -33,88 +38,117 @@ controls.lookSpeed = 0.08;
 controls.movementSpeed = 0;
 controls.noFly = true;
 controls.lookVertical = true;
-controls.verticalMin = 1.0;
-controls.verticalMax = 2.0;
 controls.lon = 0;
 controls.lat = 0;
 
-let cubes = [];
+// Custom camera rotation on mouse move
+let lastMouseX = null;
+let lastMouseY = null;
+document.body.addEventListener('mousemove', (e) => {
+  if (lastMouseX !== null && lastMouseY !== null) {
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    // Adjust lon/lat for FirstPersonControls
+    controls.lon -= deltaX * controls.lookSpeed * 2;
+    controls.lat -= deltaY * controls.lookSpeed * 2;
+    controls.lat = Math.max(-85, Math.min(85, controls.lat));
+  }
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+
+// Remove cubes array, use instanced meshes
+// let cubes = [];
+// Store instanced meshes by block name
+// Track instance count per mesh
+const instancedMeshCounts = {};
 let direction = new THREE.Vector3()
 
-function addBlock(block, x, y, z)
-{
-
+function addBlock(block, x, y, z) {
   let material, materialtop, materialbottom;
 
   if (textureCache[block.name] == undefined) {
-    const textureLoader = new THREE.TextureLoader(manager); // Use the manager here
+    const textureLoader = new THREE.TextureLoader(manager);
     const texture = textureLoader.load(block.sidetexture);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.colorSpace = THREE.SRGBColorSpace
+    texture.colorSpace = THREE.SRGBColorSpace;
 
     const toptexture = textureLoader.load(block.toptexture);
     toptexture.wrapS = THREE.RepeatWrapping;
     toptexture.wrapT = THREE.RepeatWrapping;
-    toptexture.colorSpace = THREE.SRGBColorSpace
+    toptexture.colorSpace = THREE.SRGBColorSpace;
 
     const bottomtexture = textureLoader.load(block.bottomtexture);
     bottomtexture.wrapS = THREE.RepeatWrapping;
     bottomtexture.wrapT = THREE.RepeatWrapping;
-    bottomtexture.colorSpace = THREE.SRGBColorSpace
+    bottomtexture.colorSpace = THREE.SRGBColorSpace;
 
-    material = new THREE.MeshBasicMaterial({
-        map: texture,
-    });
-    materialtop= new THREE.MeshBasicMaterial({
-        map: toptexture
-    });
-
-    materialbottom = new THREE.MeshBasicMaterial({
-        map: bottomtexture
-    });
-    textureCache[block.name] = {sidetexture : material, toptexture: materialtop, bottomtexture: materialbottom}
+    material = new THREE.MeshBasicMaterial({ map: texture });
+    materialtop = new THREE.MeshBasicMaterial({ map: toptexture });
+    materialbottom = new THREE.MeshBasicMaterial({ map: bottomtexture });
+    textureCache[block.name] = { sidetexture: material, toptexture: materialtop, bottomtexture: materialbottom };
   } else {
     material = textureCache[block.name].sidetexture;
     materialtop = textureCache[block.name].toptexture;
     materialbottom = textureCache[block.name].bottomtexture;
   }
 
-  const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-  const cube = new THREE.Mesh( geometry, [material, material, materialtop, materialbottom, material, material] );
-  cubes.push(cube)
-  cube.position.set(x, y, z);
-  scene.add( cube );
+  // Use a single geometry for all blocks
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  // Use an array of materials for each face
+  const materials = [material, material, materialtop, materialbottom, material, material];
+
+  // Create or get the instanced mesh for this block type
+  if (!instancedMeshes[block.name]) {
+    // Estimate a max count (can be increased if needed)
+    const maxCount = 5000;
+    const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
+    instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    instancedMeshes[block.name] = instancedMesh;
+    instancedMeshCounts[block.name] = 0;
+    scene.add(instancedMesh);
+  }
+  const mesh = instancedMeshes[block.name];
+  const idx = instancedMeshCounts[block.name];
+  const matrix = new THREE.Matrix4();
+  matrix.makeTranslation(x, y, z);
+  mesh.setMatrixAt(idx, matrix);
+  mesh.setColorAt && mesh.setColorAt(idx, new THREE.Color(1, 1, 1));
+  instancedMeshCounts[block.name]++;
+  mesh.count = instancedMeshCounts[block.name];
 }
 
-function isStandingOn()
-{
-  let x = camera.position.x
-  let y = camera.position.y
-  let z = camera.position.z
+// For isStandingOn and canMoveTo, we need to track block positions
+const blockPositions = [];
+function addBlockPosition(x, y, z) {
+  blockPositions.push({ x, y, z });
+}
 
-  for (let cube of cubes) {
-    if ( y > cube.position.y && Math.abs(y - cube.position.y) < 2) {
-      if (Math.abs(x - cube.position.x) < 1  && Math.abs(z - cube.position.z) < 1){
+function isStandingOn() {
+  let x = camera.position.x;
+  let y = camera.position.y;
+  let z = camera.position.z;
+  for (let pos of blockPositions) {
+    if (y > pos.y && Math.abs(y - pos.y) < 2) {
+      if (Math.abs(x - pos.x) < 1 && Math.abs(z - pos.z) < 1) {
         return true;
       }
     }
   }
-
-  return false
+  return false;
 }
 
 function canMoveTo(targetPosition) {
-    let x = targetPosition.x;
-    let y = targetPosition.y;
-    let z = targetPosition.z;
-
-    for (let cube of cubes) {
-      if ((Math.abs(cube.position.x - x) < 0.9 && Math.abs(cube.position.z - z) < 0.9) && cube.position.y > y - 1 && cube.position.y < y + 1) {
-        return false;
-      }
+  let x = targetPosition.x;
+  let y = targetPosition.y;
+  let z = targetPosition.z;
+  for (let pos of blockPositions) {
+    if ((Math.abs(pos.x - x) < 0.9 && Math.abs(pos.z - z) < 0.9) && pos.y > y - 1 && pos.y < y + 1) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 // 2. Initial setup of the loading screen
@@ -125,7 +159,7 @@ if (loadingScreen) {
 
 // 3. Use the LoadingManager's events
 manager.onStart = function ( url, itemsLoaded, itemsTotal ) {
-	console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+  console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
 };
 
 manager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
@@ -133,7 +167,7 @@ manager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
     if (loadingScreen) {
         loadingScreen.innerHTML = `Loading... ${Math.round((itemsLoaded / itemsTotal) * 100)}%`;
     }
-	console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+  console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
 };
 
 manager.onLoad = function ( ) {
@@ -146,35 +180,40 @@ manager.onLoad = function ( ) {
 };
 
 manager.onError = function ( url ) {
-	console.log( 'There was an error loading ' + url );
+  console.log( 'There was an error loading ' + url );
 };
 
 // --- Your existing game logic after the loading manager setup ---
 for (let i = -10; i < WIDTH; ++i) {
   for (let j = -10; j < HEIGHT; ++j) {
-    addBlock(BLOCKS.grass, i, -5, j)
+    addBlock(BLOCKS.grass, i, -5, j);
+    addBlockPosition(i, -5, j);
   }
 }
-
 for (let i = -10; i < WIDTH; ++i) {
   for (let j = -10; j < HEIGHT; ++j) {
-    addBlock(BLOCKS.stone, i, -6, j)
+    addBlock(BLOCKS.stone, i, -6, j);
+    addBlockPosition(i, -6, j);
   }
 }
-
 for (let i = 0; i < TREE_COUNT; ++i) {
-  let x = getRandomInt(HEIGHT + 10) - 10
-  let y = getRandomInt(WIDTH + 10) - 10
-  let height = getRandomInt(3) + 3
+  let x = getRandomInt(HEIGHT + 10) - 10;
+  let y = getRandomInt(WIDTH + 10) - 10;
+  let height = getRandomInt(3) + 3;
   for (let j = 0; j < height; ++j) {
-    addBlock(BLOCKS.wood, x, j - 4, y)
+    addBlock(BLOCKS.wood, x, j - 4, y);
+    addBlockPosition(x, j - 4, y);
   }
-  addBlock(BLOCKS.leaf, x, height - 4, y)
-  addBlock(BLOCKS.leaf, x, height - 5, y - 1)
-  addBlock(BLOCKS.leaf, x - 1, height - 5, y)
-  addBlock(BLOCKS.leaf, x, height - 5, y + 1)
-  addBlock(BLOCKS.leaf, x + 1, height - 5, y)
-  
+  addBlock(BLOCKS.leaf, x, height - 4, y);
+  addBlockPosition(x, height - 4, y);
+  addBlock(BLOCKS.leaf, x, height - 5, y - 1);
+  addBlockPosition(x, height - 5, y - 1);
+  addBlock(BLOCKS.leaf, x - 1, height - 5, y);
+  addBlockPosition(x - 1, height - 5, y);
+  addBlock(BLOCKS.leaf, x, height - 5, y + 1);
+  addBlockPosition(x, height - 5, y + 1);
+  addBlock(BLOCKS.leaf, x + 1, height - 5, y);
+  addBlockPosition(x + 1, height - 5, y);
 }
 
 let isMovingFront = false;
@@ -282,8 +321,48 @@ function animate() {
 
 }
 
+
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 })
+
+// Raycasting with instanced meshes: highlight hovered block
+let lastHighlight = { mesh: null, index: null, originalColor: null };
+window.addEventListener('mousemove', (evt) => {
+  evt.preventDefault();
+  mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
+  mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
+  rayCaster.setFromCamera(mousePosition, camera);
+  // Gather all instanced meshes
+  const allMeshes = Object.values(instancedMeshes);
+  let intersects = rayCaster.intersectObjects(allMeshes, true);
+
+  // Restore previous highlight
+  if (lastHighlight.mesh && lastHighlight.index !== null && lastHighlight.originalColor) {
+    lastHighlight.mesh.setColorAt(lastHighlight.index, lastHighlight.originalColor);
+    lastHighlight.mesh.instanceColor.needsUpdate = true;
+    lastHighlight.mesh = null;
+    lastHighlight.index = null;
+    lastHighlight.originalColor = null;
+  }
+
+  if (intersects.length > 0) {
+    const intersect = intersects[0];
+    const mesh = intersect.object;
+    const index = intersect.instanceId;
+    if (mesh && index !== undefined) {
+      // Save original color
+      let color = new THREE.Color();
+      mesh.getColorAt(index, color);
+      lastHighlight.mesh = mesh;
+      lastHighlight.index = index;
+      lastHighlight.originalColor = color.clone();
+      // Set highlight color
+      mesh.setColorAt(index, new THREE.Color(1, 1, 1));
+      mesh.instanceColor.needsUpdate = true;
+    }
+  }
+});
