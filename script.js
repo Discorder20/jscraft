@@ -3,18 +3,20 @@ import BLOCKS from './blocks.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { itemCollected, placeCurrentItem } from './toolbar.js';
+import { WIDTH, HEIGHT, TREE_COUNT } from './constansts.js';
+import addNewBlock from './addblock.js';
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
+function addBlock(block, x, y, z) {
+  addNewBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, textureCache, manager)
+}
+
 const geometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
 const whitematerial = new THREE.MeshBasicMaterial({color: "white", transparent: true, opacity: 0.2})
 const highlightblock = new THREE.Mesh(geometry, whitematerial);
-
-const WIDTH = 50;
-const HEIGHT = 50;
-const TREE_COUNT = 20;
 
 let textureCache = {}
 const instancedMeshes = {};
@@ -69,62 +71,6 @@ document.body.addEventListener('mousemove', (e) => {
 // Track instance count per mesh
 const instancedMeshCounts = {};
 let direction = new THREE.Vector3()
-
-function addBlock(block, x, y, z) {
-  let material, materialtop, materialbottom;
-
-  if (textureCache[block.name] == undefined) {
-    const textureLoader = new THREE.TextureLoader(manager);
-    const texture = textureLoader.load(block.sidetexture);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.colorSpace = THREE.SRGBColorSpace;
-
-    const toptexture = textureLoader.load(block.toptexture);
-    toptexture.wrapS = THREE.RepeatWrapping;
-    toptexture.wrapT = THREE.RepeatWrapping;
-    toptexture.colorSpace = THREE.SRGBColorSpace;
-
-    const bottomtexture = textureLoader.load(block.bottomtexture);
-    bottomtexture.wrapS = THREE.RepeatWrapping;
-    bottomtexture.wrapT = THREE.RepeatWrapping;
-    bottomtexture.colorSpace = THREE.SRGBColorSpace;
-
-    material = new THREE.MeshBasicMaterial({ map: texture });
-    materialtop = new THREE.MeshBasicMaterial({ map: toptexture });
-    materialbottom = new THREE.MeshBasicMaterial({ map: bottomtexture });
-    textureCache[block.name] = { sidetexture: material, toptexture: materialtop, bottomtexture: materialbottom };
-  } else {
-    material = textureCache[block.name].sidetexture;
-    materialtop = textureCache[block.name].toptexture;
-    materialbottom = textureCache[block.name].bottomtexture;
-  }
-
-  // Use a single geometry for all blocks
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  // Use an array of materials for each face
-  const materials = [material, material, materialtop, materialbottom, material, material];
-
-  // Create or get the instanced mesh for this block type
-  if (!instancedMeshes[block.name]) {
-    // Estimate a max count (can be increased if needed)
-    const maxCount = 20000;
-    const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
-    instancedMesh.name = block.name;
-    instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    instancedMeshes[block.name] = instancedMesh;
-    instancedMeshCounts[block.name] = 0;
-    scene.add(instancedMesh);
-  }
-  const mesh = instancedMeshes[block.name];
-  const idx = instancedMeshCounts[block.name];
-  const matrix = new THREE.Matrix4();
-  matrix.makeTranslation(x, y, z);
-  mesh.setMatrixAt(idx, matrix);
-  mesh.setColorAt && mesh.setColorAt(idx, new THREE.Color(1, 1, 1));
-  instancedMeshCounts[block.name]++;
-  mesh.count = instancedMeshCounts[block.name];
-}
 
 // For isStandingOn and canMoveTo, we need to track block positions
 const blockPositions = [];

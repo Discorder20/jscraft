@@ -157,6 +157,7 @@
     <script type="module" src="script.js"></script>
     <script type="module" src="toolbar.js"></script>
     <script type="module" src="constansts.js"></script>
+    <script type="module" src="addblock.js"></script>
 </head>
 <body>
     <div class="toolbar-container">
@@ -220,20 +221,32 @@
     let runned = false
     document.addEventListener('click', () => {
         if (!runned) {
-        runned = true;
-         document.getElementById('audio').play();
+            runned = true;
+            try {
+            document.getElementById('audio').play();
+            } catch(e) {
+                runned = false;
+            }
         }
     })
     document.addEventListener('keydown', () => {
         if (!runned) {
-        runned = true;
-         document.getElementById('audio').play();
+            runned = true;
+            try {
+            document.getElementById('audio').play();
+            } catch(e) {
+                runned = false;
+            }
         }
     })
      document.addEventListener('mousemove', () => {
         if (!runned) {
-        runned = true;
-         document.getElementById('audio').play();
+            runned = true;
+            try {
+            document.getElementById('audio').play();
+            } catch(e) {
+                runned = false;
+            }
         }
     })
 </script>
