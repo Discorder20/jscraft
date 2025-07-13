@@ -229,17 +229,17 @@
 
 <script>
     document.addEventListener('click', () => {
-        if (!document.getElementById('audio').paused) {
+        if (document.getElementById('audio').paused) {
             document.getElementById('audio').play();
         }
     })
     document.addEventListener('keydown', () => {
-        if (!document.getElementById('audio').paused) {
+        if (document.getElementById('audio').paused) {
             document.getElementById('audio').play();
         }
     })
      document.addEventListener('mousemove', () => {
-        if (!document.getElementById('audio').paused) {
+        if (document.getElementById('audio').paused) {
             document.getElementById('audio').play();
         }
     })
