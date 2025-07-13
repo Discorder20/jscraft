@@ -141,12 +141,14 @@ for (let i = -10; i < WIDTH; ++i) {
   for (let j = -10; j < HEIGHT; ++j) {
     addBlock(BLOCKS.grass, i, -5, j);
     addBlockPosition(i, -5, j);
-    addBlock(BLOCKS.stone, i, -6, j);
+    addBlock(BLOCKS.dirt, i, -6, j);
     addBlockPosition(i, -6, j);
     addBlock(BLOCKS.stone, i, -7, j);
     addBlockPosition(i, -7, j);
     addBlock(BLOCKS.stone, i, -8, j);
     addBlockPosition(i, -8, j);
+    addBlock(BLOCKS.stone, i, -9, j);
+    addBlockPosition(i, -9, j);
   }
 }
 

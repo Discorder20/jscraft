@@ -40,6 +40,8 @@ function addBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, t
     // Estimate a max count (can be increased if needed)
     const maxCount = 20000;
     const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
+    instancedMesh.castShadow = true;
+    instancedMesh.receiveShadow = true;
     instancedMesh.name = block.name;
     instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     instancedMeshes[block.name] = instancedMesh;

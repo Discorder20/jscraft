@@ -22,6 +22,12 @@ const BLOCKS = {
         toptexture: './images/leaf.webp',
         sidetexture: './images/leaf.webp',
         bottomtexture: './images/leaf.webp',
+    },
+    dirt: {
+        name: 'dirt',
+        toptexture: './images/dirt.jpg',
+        sidetexture: './images/dirt.jpg',
+        bottomtexture: './images/dirt.jpg',
     }
 }
 

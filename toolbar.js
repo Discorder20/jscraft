@@ -6,8 +6,9 @@
  let emojis =  {
     stone: '🪨',
     leaf: '🍃',
-    grass: '🌱',
-    wood: '🪵'
+    grass: '🌿',
+    wood: '🪵',
+    dirt: '🌱'
  }
  
  document.addEventListener('keydown', function(e) {
