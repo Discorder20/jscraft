@@ -86,7 +86,7 @@ function isStandingOn() {
   let z = camera.position.z;
   for (let pos of blockPositions) {
     if (y > pos.y && Math.abs(y - pos.y) < 2) {
-      if (Math.abs(x - pos.x) < 1 && Math.abs(z - pos.z) < 1) {
+      if (Math.abs(x - pos.x) < 0.6 && Math.abs(z - pos.z) < 0.6) {
         return true;
       }
     }
@@ -99,7 +99,7 @@ function canMoveTo(targetPosition) {
   let y = targetPosition.y;
   let z = targetPosition.z;
   for (let pos of blockPositions) {
-    if ((Math.abs(pos.x - x) < 0.9 && Math.abs(pos.z - z) < 0.9) && pos.y > y - 1 && pos.y < y + 1) {
+    if ((Math.abs(pos.x - x) < 0.8 && Math.abs(pos.z - z) < 0.8) && pos.y > y - 1 && pos.y < y + 1) {
       return false;
     }
   }
