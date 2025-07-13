@@ -427,6 +427,7 @@ window.addEventListener('contextmenu', (evt) => {
 
 function play() {
   if (loaded) {
+    document.getElementById('audio').play();
     renderer.setAnimationLoop( animate );
     document.getElementsByClassName('menu')[0].style.display = "none";
     document.getElementsByClassName('toolbar-container')[0].style.display = "unset";
