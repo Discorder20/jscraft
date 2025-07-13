@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BLOCK_REGISTER_SIZE } from './constansts.js';
 
 function addBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, textureCache, manager) {
   let material, materialtop, materialbottom;
@@ -38,7 +39,7 @@ function addBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, t
   // Create or get the instanced mesh for this block type
   if (!instancedMeshes[block.name]) {
     // Estimate a max count (can be increased if needed)
-    const maxCount = 20000;
+    const maxCount = BLOCK_REGISTER_SIZE;
     const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
     instancedMesh.castShadow = true;
     instancedMesh.receiveShadow = true;
