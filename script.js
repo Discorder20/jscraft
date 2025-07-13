@@ -4,18 +4,6 @@ import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.j
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { itemCollected, placeCurrentItem } from './toolbar.js';
 
-const storage = [
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-  {block: '', amount: 0},
-]
-
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
