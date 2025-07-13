@@ -14,6 +14,8 @@ function addBlock(block, x, y, z) {
   addNewBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, textureCache, manager)
 }
 
+let loaded = false;
+
 const geometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
 const whitematerial = new THREE.MeshBasicMaterial({color: "white", transparent: true, opacity: 0.2})
 const highlightblock = new THREE.Mesh(geometry, whitematerial);
@@ -129,7 +131,7 @@ manager.onLoad = function ( ) {
     if (loadingScreen) {
         loadingScreen.style.display = 'none';
     }
-    renderer.setAnimationLoop( animate );
+    loaded = true;
 };
 
 manager.onError = function ( url ) {
@@ -422,3 +424,17 @@ window.addEventListener('contextmenu', (evt) => {
     }
   }
 });
+
+function play() {
+  if (loaded) {
+    renderer.setAnimationLoop( animate );
+    document.getElementsByClassName('menu')[0].style.display = "none";
+    document.getElementsByClassName('toolbar-container')[0].style.display = "unset";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('play-btn').addEventListener('click', () => {
+    play()
+  })
+})

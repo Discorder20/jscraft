@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link href="https://fonts.cdnfonts.com/css/minecraftia" rel="stylesheet">
     <style>
+        * {
+            font-family: Minecraftia;
+            font-weight: 300;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -160,7 +165,12 @@
     <script type="module" src="addblock.js"></script>
 </head>
 <body>
-    <div class="toolbar-container">
+    <div class="menu" style="background-image: url(./images/menu.webp); width: 100vw; height: 100vh; z-index: 20; background-repeat: repeat; position: absolute; display: flex; flex-direction: column; align-items: center;">
+        <h1 style="text-align: center; color: white;">JSCraft</h1>
+        <button id="play-btn" style="font-size: large; background-color: lightgray;">play the game</button>
+    </div>
+
+    <div class="toolbar-container" style="display: none;">
         <div class="toolbar">
             <div class="slot selected" data-slot="1">
                 <div class="slot-number"></div>
