@@ -31,14 +31,10 @@ function addBlock(block, x, y, z, scene, instancedMeshes, instancedMeshCounts, t
     materialbottom = textureCache[block.name].bottomtexture;
   }
 
-  // Use a single geometry for all blocks
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  // Use an array of materials for each face
   const materials = [material, material, materialtop, materialbottom, material, material];
 
-  // Create or get the instanced mesh for this block type
   if (!instancedMeshes[block.name]) {
-    // Estimate a max count (can be increased if needed)
     const maxCount = BLOCK_REGISTER_SIZE;
     const instancedMesh = new THREE.InstancedMesh(geometry, materials, maxCount);
     instancedMesh.castShadow = true;

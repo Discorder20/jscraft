@@ -35,8 +35,6 @@ scene.add(highlightblock)
 
 renderer.setClearColor("deepskyblue")
 renderer.setSize( window.innerWidth, window.innerHeight );
-// We will set animation loop after loading
-// renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 camera.position.z = 0;
 camera.position.x = 0;
@@ -50,14 +48,12 @@ controls.lookVertical = true;
 controls.lon = 0;
 controls.lat = 0;
 
-// Custom camera rotation on mouse move
 let lastMouseX = null;
 let lastMouseY = null;
 document.body.addEventListener('mousemove', (e) => {
   if (lastMouseX !== null && lastMouseY !== null) {
     const deltaX = e.clientX - lastMouseX;
     const deltaY = e.clientY - lastMouseY;
-    // Adjust lon/lat for FirstPersonControls
     controls.lon -= deltaX * controls.lookSpeed * 2;
     controls.lat -= deltaY * controls.lookSpeed * 2;
     controls.lat = Math.max(-85, Math.min(85, controls.lat));
@@ -66,14 +62,9 @@ document.body.addEventListener('mousemove', (e) => {
   lastMouseY = e.clientY;
 });
 
-// Remove cubes array, use instanced meshes
-// let cubes = [];
-// Store instanced meshes by block name
-// Track instance count per mesh
 const instancedMeshCounts = {};
 let direction = new THREE.Vector3()
 
-// For isStandingOn and canMoveTo, we need to track block positions
 const blockPositions = [];
 function addBlockPosition(x, y, z) {
   blockPositions.push({ x, y, z });
@@ -105,19 +96,16 @@ function canMoveTo(targetPosition) {
   return true;
 }
 
-// 2. Initial setup of the loading screen
 const loadingScreen = document.getElementById('loading-screen');
 if (loadingScreen) {
-    loadingScreen.style.display = 'flex'; // Show the loading screen initially
+    loadingScreen.style.display = 'flex';
 }
 
-// 3. Use the LoadingManager's events
 manager.onStart = function ( url, itemsLoaded, itemsTotal ) {
   console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
 };
 
 manager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
-    // You can update a progress bar here if you have one
     if (loadingScreen) {
         loadingScreen.innerHTML = `Loading... ${Math.round((itemsLoaded / itemsTotal) * 100)}%`;
     }
@@ -126,7 +114,6 @@ manager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
 
 manager.onLoad = function ( ) {
     console.log( 'Loading Complete!');
-    // 4. Hide the loading screen and start the animation loop when everything is loaded
     if (loadingScreen) {
         loadingScreen.style.display = 'none';
     }
@@ -137,7 +124,6 @@ manager.onError = function ( url ) {
   console.log( 'There was an error loading ' + url );
 };
 
-// --- Your existing game logic after the loading manager setup ---
 for (let i = -10; i < WIDTH; ++i) {
   for (let j = -10; j < HEIGHT; ++j) {
     addBlock(BLOCKS.grass, i, -5, j);
@@ -286,18 +272,15 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 })
 
-// Raycasting with instanced meshes: highlight hovered block
 let lastHighlight = { mesh: null, index: null, originalColor: null };
 window.addEventListener('mousemove', (evt) => {
   evt.preventDefault();
   mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
   mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
   rayCaster.setFromCamera(mousePosition, camera);
-  // Gather all instanced meshes
   const allMeshes = Object.values(instancedMeshes);
   let intersects = rayCaster.intersectObjects(allMeshes, true);
 
-  // Restore previous highlight
   if (lastHighlight.mesh && lastHighlight.index !== null && lastHighlight.originalColor) {
     lastHighlight.mesh.setColorAt(lastHighlight.index, lastHighlight.originalColor);
     lastHighlight.mesh.instanceColor.needsUpdate = true;
@@ -325,11 +308,9 @@ window.addEventListener('click', (evt) => {
   mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
   mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
   rayCaster.setFromCamera(mousePosition, camera);
-  // Gather all instanced meshes
   const allMeshes = Object.values(instancedMeshes);
   let intersects = rayCaster.intersectObjects(allMeshes, true);
 
-  // Restore previous highlight
   if (lastHighlight.mesh && lastHighlight.index !== null && lastHighlight.originalColor) {
     lastHighlight.mesh.setColorAt(lastHighlight.index, lastHighlight.originalColor);
     lastHighlight.mesh.instanceColor.needsUpdate = true;
@@ -348,8 +329,6 @@ window.addEventListener('click', (evt) => {
     position.setFromMatrixPosition(matrix);
     itemCollected(mesh.name)
 
-    // Remove the block from the scene
-    // 1. Remove from blockPositions
     for (let i = 0; i < blockPositions.length; ++i) {
       if (
         Math.abs(blockPositions[i].x - position.x) < 0.1 &&
@@ -361,10 +340,8 @@ window.addEventListener('click', (evt) => {
       }
     }
 
-    // 2. Remove the instance from the instanced mesh
     const lastIdx = mesh.count - 1;
     if (instanceId !== lastIdx) {
-      // Move last instance to the removed spot
       const tempMatrix = new THREE.Matrix4();
       mesh.getMatrixAt(lastIdx, tempMatrix);
       mesh.setMatrixAt(instanceId, tempMatrix);
@@ -382,14 +359,12 @@ window.addEventListener('click', (evt) => {
 });
 
 window.addEventListener('contextmenu', (evt) => {
-  // Only place if highlightblock is visible and within a reasonable range
   const pos = highlightblock.position;
   if (pos.x < -99 || pos.y < -99 || pos.z < -99) return;
   if (camera.position.distanceTo(pos) > 5) return;
 
   let meshName = placeCurrentItem();
   if (meshName) {
-    // Raycast again to get the face normal
     mousePosition.x = (evt.clientX / innerWidth) * 2 - 1;
     mousePosition.y = -(evt.clientY / innerHeight) * 2 + 1;
     rayCaster.setFromCamera(mousePosition, camera);
@@ -399,12 +374,9 @@ window.addEventListener('contextmenu', (evt) => {
     if (intersects.length > 0 && intersects[0].distance < 4.0) {
       const intersect = intersects[0];
       const normal = intersect.face.normal.clone();
-      // Transform normal by instance matrix (for rotated blocks)
       normal.transformDirection(intersect.object.matrixWorld);
-      // Place block adjacent to the face clicked
       const placePos = pos.clone().add(normal);
 
-      // Check if block already exists at placePos
       const exists = blockPositions.some(bp =>
         Math.abs(bp.x - placePos.x) < 0.1 &&
         Math.abs(bp.y - placePos.y) < 0.1 &&

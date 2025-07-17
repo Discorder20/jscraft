@@ -19,7 +19,6 @@
             }
         });
 
-        // Add click support
 document.querySelectorAll('.slot').forEach(slot => {
     slot.addEventListener('click', function() {
         const slotNumber = parseInt(this.dataset.slot);
@@ -28,19 +27,16 @@ document.querySelectorAll('.slot').forEach(slot => {
 });
 
 export function selectSlot(slotNumber) {
-            // Remove selection from all slots
     document.querySelectorAll('.slot').forEach(slot => {
         slot.classList.remove('selected');
     });
             
-            // Add selection to clicked slot
     const selectedSlot = document.querySelector(`[data-slot="${slotNumber}"]`);
     if (selectedSlot) {
         selectedSlot.classList.add('selected');
         }
 }
 
-        // Example function to update item count
 export function updateItemCount(slotNumber, count) {
   counts[slotNumber - 1] = count;
   const slot = document.querySelector(`[data-slot="${slotNumber}"]`);
@@ -54,7 +50,6 @@ export function updateItemCount(slotNumber, count) {
   }
 }
 
-// Example function to set emoji for a slot
 export function setSlotEmoji(slotNumber, emoji) {
   const slot = document.querySelector(`[data-slot="${slotNumber}"]`);
   const emojiElement = slot.querySelector('.item-emoji');
@@ -93,7 +88,7 @@ export function placeCurrentItem() {
         }
     });
     if (currentIndex == -1) {
-        return null; // No item selected
+        return null;
     }   
     const itemName = names[currentIndex];
     if (itemName) {
@@ -103,6 +98,6 @@ export function placeCurrentItem() {
             names[currentIndex] = "";
             setSlotEmoji(currentIndex + 1, '');
         }
-        return itemName; // Return the name of the placed item
+        return itemName;
     }
 }
