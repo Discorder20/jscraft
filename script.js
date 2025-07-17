@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { itemCollected, placeCurrentItem } from './toolbar.js';
 import { WIDTH, HEIGHT, TREE_COUNT } from './constansts.js';
 import addNewBlock from './addblock.js';
+import mobileCheck from './mobilecheck.js';
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max);
@@ -15,6 +16,12 @@ function addBlock(block, x, y, z) {
 }
 
 let loaded = false;
+
+if (mobileCheck()) {
+  const errorMsg = `This game is designed for desktop usage, you can't open it on this mobile device`;
+  document.body.innerHTML = `<p style="text-align: center">${errorMsg}</p>`
+  throw new Error(errorMsg)
+}
 
 const geometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
 const whitematerial = new THREE.MeshBasicMaterial({color: "white", transparent: true, opacity: 0.2})
