@@ -19,7 +19,10 @@ let loaded = false;
 
 if (mobileCheck()) {
   const errorMsg = `This game is designed for desktop usage, you can't open it on this mobile device`;
-  document.body.innerHTML = `<p style="text-align: center">${errorMsg}</p>`
+  document.body.innerHTML = `
+   <div class="menu" style="background-image: url(./images/menu.webp); width: 100vw; height: 100vh; z-index: 50; background-repeat: repeat; position: absolute; display: flex; flex-direction: column; align-items: center; background-color:#1e100b;">
+        <p style="text-align: center; color: white">${errorMsg}</p>
+    </div>`
   throw new Error(errorMsg)
 }
 
