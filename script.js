@@ -25,10 +25,14 @@ const instancedMeshes = {};
 
 const manager = new THREE.LoadingManager();
 const scene = new THREE.Scene();
-scene.add(highlightblock)
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 3000 );
-
 const renderer = new THREE.WebGLRenderer();
+const rayCaster = new THREE.Raycaster();
+let mousePosition = new THREE.Vector2();
+let clock = new THREE.Clock();
+
+scene.add(highlightblock)
+
 renderer.setClearColor("deepskyblue")
 renderer.setSize( window.innerWidth, window.innerHeight );
 // We will set animation loop after loading
@@ -37,11 +41,6 @@ document.body.appendChild( renderer.domElement );
 camera.position.z = 0;
 camera.position.x = 0;
 camera.position.y = 0;
-
-const rayCaster = new THREE.Raycaster();
-let mousePosition = new THREE.Vector2();
-
-let clock = new THREE.Clock();
 
 let controls = new FirstPersonControls(camera, document.body);
 controls.lookSpeed = 0.08;
